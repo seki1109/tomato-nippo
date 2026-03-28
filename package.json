@@ -7,17 +7,28 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "db:seed": "tsx prisma/seed.ts"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@prisma/adapter-mariadb": "^7.6.0",
+    "@prisma/client": "^7.6.0",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.4",
     "@tailwindcss/postcss": "^4.2.2",
     "autoprefixer": "^10.4.27",
+    "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.7.0",
+    "mariadb": "^3.5.2",
     "next": "^15.0.0",
     "postcss": "^8.5.8",
     "react": "^19.0.0",
@@ -27,6 +38,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.0.0",
+    "@types/bcryptjs": "^2.4.6",
     "@types/node": "^25.5.0",
     "@types/react": "19.2.14",
     "@typescript-eslint/eslint-plugin": "^8.0.0",
@@ -34,6 +46,8 @@
     "eslint": "^9.0.0",
     "eslint-config-next": "^15.0.0",
     "eslint-plugin-import": "^2.31.0",
+    "prisma": "^7.6.0",
+    "tsx": "^4.21.0",
     "typescript": "^5.0.0"
   }
 }

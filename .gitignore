@@ -28,8 +28,8 @@ npm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# prisma migrations (generated)
-prisma/migrations/
+# prisma generated client
+src/generated/
 
 # coverage
 coverage/

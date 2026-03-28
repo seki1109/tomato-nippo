@@ -1,0 +1,115 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ──────────────────────────────────────────
+// Enums
+// ──────────────────────────────────────────
+
+enum Role {
+  SALES
+  MANAGER
+  ADMIN
+}
+
+enum ReportStatus {
+  DRAFT
+  SUBMITTED
+}
+
+// ──────────────────────────────────────────
+// Models
+// ──────────────────────────────────────────
+
+/// ユーザーマスター
+model User {
+  id           Int           @id @default(autoincrement()) @map("user_id")
+  name         String        @db.VarChar(100)
+  email        String        @unique @db.VarChar(255)
+  passwordHash String        @map("password_hash") @db.VarChar(255)
+  role         Role
+  department   String?       @db.VarChar(100)
+  isActive     Boolean       @default(true) @map("is_active")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  dailyReports DailyReport[]
+  comments     Comment[]
+
+  @@map("USER")
+}
+
+/// 顧客マスター
+model Customer {
+  id            Int           @id @default(autoincrement()) @map("customer_id")
+  companyName   String        @map("company_name") @db.VarChar(200)
+  contactPerson String?       @map("contact_person") @db.VarChar(100)
+  phone         String?       @db.VarChar(20)
+  address       String?       @db.VarChar(500)
+  isActive      Boolean       @default(true) @map("is_active")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  visitRecords  VisitRecord[]
+
+  @@map("CUSTOMER")
+}
+
+/// 日報
+model DailyReport {
+  id           Int           @id @default(autoincrement()) @map("report_id")
+  userId       Int           @map("user_id")
+  reportDate   DateTime      @map("report_date") @db.Date
+  problem      String?       @db.Text
+  plan         String?       @db.Text
+  status       ReportStatus  @default(DRAFT)
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  user         User          @relation(fields: [userId], references: [id])
+  visitRecords VisitRecord[]
+  comments     Comment[]
+
+  /// 同一ユーザー・同一日付の日報は1件のみ
+  @@unique([userId, reportDate])
+  @@map("DAILY_REPORT")
+}
+
+/// 訪問記録
+model VisitRecord {
+  id           Int         @id @default(autoincrement()) @map("visit_id")
+  reportId     Int         @map("report_id")
+  customerId   Int         @map("customer_id")
+  visitContent String      @map("visit_content") @db.Text
+  visitOrder   Int         @default(1) @map("visit_order")
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  report       DailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  customer     Customer    @relation(fields: [customerId], references: [id])
+
+  @@map("VISIT_RECORD")
+}
+
+/// コメント
+model Comment {
+  id          Int         @id @default(autoincrement()) @map("comment_id")
+  reportId    Int         @map("report_id")
+  userId      Int         @map("user_id")
+  commentText String      @map("comment_text") @db.Text
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  report      DailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  user        User        @relation(fields: [userId], references: [id])
+
+  @@map("COMMENT")
+}
