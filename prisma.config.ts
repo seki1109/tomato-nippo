@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { defineConfig } from "prisma/config";
 
 export default defineConfig({
@@ -6,6 +7,7 @@ export default defineConfig({
     url:
       process.env.DATABASE_URL ??
       "mysql://user:password@localhost:3306/tomato_nippo",
+    shadowDatabaseUrl: process.env.SHADOW_DATABASE_URL,
   },
   migrations: {
     path: "prisma/migrations",
