@@ -20,6 +20,8 @@ const eslintConfig = [
       "coverage/**",
       "*.config.mjs",
       "next-env.d.ts",
+      "prisma/**",
+      "src/generated/**",
     ],
   },
 
