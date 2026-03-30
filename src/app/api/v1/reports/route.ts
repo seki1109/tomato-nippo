@@ -117,8 +117,9 @@ export async function POST(request: NextRequest) {
 
   // 3. バリデーション
 
-  // report_date
-  const today = new Date().toISOString().slice(0, 10);
+  // report_date（ローカル時刻で今日の日付を取得）
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   if (report_date === undefined || report_date === null || report_date === "") {
     details.push({ field: "report_date", message: "日付は必須です" });
   } else if (
