@@ -38,7 +38,7 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-user-id", String(payload["userId"]));
     requestHeaders.set("x-user-role", String(payload["role"]));
-    requestHeaders.set("x-user-name", String(payload["name"]));
+    requestHeaders.set("x-user-name", encodeURIComponent(String(payload["name"])));
 
     return NextResponse.next({ request: { headers: requestHeaders } });
   } catch {

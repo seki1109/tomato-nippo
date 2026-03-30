@@ -10,7 +10,7 @@ import type { NextRequest } from "next/server";
 export function getAuthUser(request: NextRequest): JwtPayload {
   const userId = Number(request.headers.get("x-user-id"));
   const role = request.headers.get("x-user-role") as Role;
-  const name = request.headers.get("x-user-name") ?? "";
+  const name = decodeURIComponent(request.headers.get("x-user-name") ?? "");
   return { userId, role, name };
 }
 
