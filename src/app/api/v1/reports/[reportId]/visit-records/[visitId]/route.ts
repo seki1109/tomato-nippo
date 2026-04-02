@@ -2,6 +2,7 @@ import { forbiddenError, notFoundError, successResponse, validationError } from 
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/require-role";
 
+import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function PUT(
@@ -118,4 +119,53 @@ export async function PUT(
     visit_order: updated.visitOrder,
     created_at: updated.createdAt.toISOString(),
   });
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ reportId: string; visitId: string }> },
+) {
+  const authUser = requireRole(request, ["SALES"]);
+  if (!authUser) return forbiddenError();
+
+  const { reportId, visitId } = await params;
+  const reportIdNum = Number(reportId);
+  const visitIdNum = Number(visitId);
+
+  if (!Number.isInteger(reportIdNum) || reportIdNum <= 0) {
+    return notFoundError("日報が見つかりません");
+  }
+  if (!Number.isInteger(visitIdNum) || visitIdNum <= 0) {
+    return notFoundError("訪問記録が見つかりません");
+  }
+
+  const report = await prisma.dailyReport.findUnique({
+    where: { id: reportIdNum },
+  });
+
+  if (!report) {
+    return notFoundError("日報が見つかりません");
+  }
+
+  if (report.userId !== authUser.userId) {
+    return forbiddenError("この日報を編集する権限がありません");
+  }
+
+  if (report.status === "SUBMITTED") {
+    return forbiddenError("提出済みの日報は編集できません");
+  }
+
+  const visitRecord = await prisma.visitRecord.findUnique({
+    where: { id: visitIdNum },
+  });
+
+  if (!visitRecord || visitRecord.reportId !== reportIdNum) {
+    return notFoundError("訪問記録が見つかりません");
+  }
+
+  await prisma.visitRecord.delete({
+    where: { id: visitIdNum },
+  });
+
+  return new NextResponse(null, { status: 204 });
 }
