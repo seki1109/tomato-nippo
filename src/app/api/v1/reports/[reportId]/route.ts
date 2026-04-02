@@ -1,4 +1,6 @@
 
+import { NextResponse } from "next/server";
+
 import {
   forbiddenError,
   notFoundError,
@@ -199,4 +201,38 @@ export async function PUT(
     created_at: updated.createdAt.toISOString(),
     updated_at: updated.updatedAt.toISOString(),
   });
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ reportId: string }> },
+) {
+  const authUser = requireRole(request, ["SALES"]);
+  if (!authUser) return forbiddenError();
+
+  const { reportId } = await params;
+  const id = Number(reportId);
+  if (!Number.isInteger(id) || id <= 0) {
+    return notFoundError("日報が見つかりません");
+  }
+
+  const report = await prisma.dailyReport.findUnique({
+    where: { id },
+  });
+
+  if (!report) {
+    return notFoundError("日報が見つかりません");
+  }
+
+  if (report.userId !== authUser.userId) {
+    return forbiddenError("この日報を削除する権限がありません");
+  }
+
+  if (report.status === "SUBMITTED") {
+    return forbiddenError("提出済みの日報は削除できません");
+  }
+
+  await prisma.dailyReport.delete({ where: { id } });
+
+  return new NextResponse(null, { status: 204 });
 }
