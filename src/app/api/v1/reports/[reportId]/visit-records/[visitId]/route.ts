@@ -1,8 +1,9 @@
+import { NextResponse } from "next/server";
+
 import { forbiddenError, notFoundError, successResponse, validationError } from "@/lib/api-response";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/require-role";
 
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
 export async function PUT(
