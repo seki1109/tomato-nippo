@@ -1,4 +1,4 @@
-export type { User, Role } from "./user";
+export type { User, AuthUser, Role } from "./user";
 export type { DailyReport, ReportStatus, VisitRecord } from "./report";
 export type { Customer } from "./customer";
 export type { Comment } from "./comment";
