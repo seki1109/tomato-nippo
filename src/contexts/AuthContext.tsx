@@ -42,6 +42,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setAuth = useCallback((newUser: AuthUser, newToken: string): void => {
     localStorage.setItem(TOKEN_KEY, newToken);
     localStorage.setItem(USER_KEY, JSON.stringify(newUser));
+    // Next.js Middleware がページルートの認証チェックに使用する Cookie を設定する
+    document.cookie = `auth-token=${newToken}; path=/; SameSite=Strict`;
     setToken(newToken);
     setUser(newUser);
   }, []);
@@ -60,6 +62,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    // Middleware 用 Cookie を削除する
+    document.cookie = "auth-token=; path=/; max-age=0; SameSite=Strict";
     setToken(null);
     setUser(null);
     router.push("/login");
