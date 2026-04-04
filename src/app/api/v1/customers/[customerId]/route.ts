@@ -143,7 +143,7 @@ export async function DELETE(
     return notFoundError("顧客が見つかりません");
   }
 
-  // 2. 顧客の取得
+  // 2. 顧客の取得（is_active=true のもののみ対象）
   const existing = await prisma.customer.findUnique({
     where: { id: customerIdNum },
   });
