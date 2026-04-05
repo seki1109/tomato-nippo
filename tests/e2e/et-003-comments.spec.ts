@@ -89,9 +89,12 @@ test.describe("ET-003: コメント投稿フロー（MANAGER）", () => {
     await block.getByRole("button", { name: "編集" }).click();
 
     const updatedText = `編集後コメント ${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    await block.getByRole("textbox").clear();
-    await block.getByRole("textbox").fill(updatedText);
-    await block.getByRole("button", { name: "保存" }).click();
+    // 編集モード後は block の条件（<p> と「編集」ボタン）が両方消えるため locator が無効になる。
+    // 編集用 textarea はプレースホルダーなし、新規コメント欄はプレースホルダーありで区別する。
+    const editTextarea = page.locator("textarea:not([placeholder])");
+    await editTextarea.clear();
+    await editTextarea.fill(updatedText);
+    await page.getByRole("button", { name: "保存" }).click();
 
     await expect(page.getByText(updatedText)).toBeVisible();
     await expect(page.locator("p", { hasText: originalText })).not.toBeVisible();

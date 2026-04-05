@@ -2,11 +2,6 @@ import { expect, test } from "@playwright/test";
 
 import { AUTH_STATE } from "./helpers/auth";
 
-// テスト用日付（シードデータの日付と重複しない過去日）
-const TEST_DATE_DRAFT = "2025-06-01";
-const TEST_DATE_SUBMIT = "2025-06-02";
-const TEST_DATE_DUPLICATE = "2025-06-03";
-
 /**
  * ET-002: 日報作成〜提出フロー（SALES）
  */
@@ -14,6 +9,23 @@ test.describe("ET-002: 日報作成〜提出フロー（SALES）", () => {
   test.use({ storageState: AUTH_STATE.sales });
 
   let salesToken: string;
+
+  // SUBMITTED 日報は削除不可のため、beforeAll で既存レポートと被らない日付を動的に割り当てる
+  let testDateDraft = "2025-06-01";
+  let testDateSubmit = "2025-06-02";
+  // TEST_DATE_DUPLICATE は常に DRAFT で作成・削除するため固定でよい
+  const TEST_DATE_DUPLICATE = "2025-06-03";
+
+  /** takenDates に含まれない最初の空き日付を start から過去方向へ探して返す */
+  function findAvailableDate(takenDates: Set<string>, start: string): string {
+    let candidate = start;
+    while (takenDates.has(candidate)) {
+      const d = new Date(candidate);
+      d.setDate(d.getDate() - 1);
+      candidate = d.toISOString().split("T")[0]!;
+    }
+    return candidate;
+  }
 
   test.beforeAll(async ({ request }) => {
     // テスト用トークン取得
@@ -23,24 +35,37 @@ test.describe("ET-002: 日報作成〜提出フロー（SALES）", () => {
     const json = (await res.json()) as { data: { token: string } };
     salesToken = json.data.token;
 
-    // 重複日付テスト用の日報を事前作成（冪等）
-    const existing = await request.get("/api/v1/reports", {
+    // 既存レポート一覧取得（クリーンアップ & 空き日付の算出に使用）
+    const existing = await request.get("/api/v1/reports?per_page=1000", {
       headers: { Authorization: `Bearer ${salesToken}` },
     });
     const existingJson = (await existing.json()) as {
       data: { reports: { report_id: number; report_date: string; status: string }[] };
     };
 
-    const testDates = [TEST_DATE_DRAFT, TEST_DATE_SUBMIT, TEST_DATE_DUPLICATE];
+    // デフォルトのテスト日付に対応する DRAFT 日報を削除（冪等）
+    const defaultTestDates = new Set([testDateDraft, testDateSubmit, TEST_DATE_DUPLICATE]);
     for (const r of existingJson.data.reports) {
-      if (testDates.includes(r.report_date)) {
-        if (r.status === "DRAFT") {
-          await request.delete(`/api/v1/reports/${r.report_id}`, {
-            headers: { Authorization: `Bearer ${salesToken}` },
-          });
-        }
+      if (defaultTestDates.has(r.report_date) && r.status === "DRAFT") {
+        await request.delete(`/api/v1/reports/${r.report_id}`, {
+          headers: { Authorization: `Bearer ${salesToken}` },
+        });
       }
     }
+
+    // SUBMITTED 日報の日付は再利用不可なので使用済みセットに追加
+    const takenDates = new Set(
+      existingJson.data.reports
+        .filter((r) => r.status === "SUBMITTED")
+        .map((r) => r.report_date),
+    );
+    // TEST_DATE_DUPLICATE も予約済みとして扱う
+    takenDates.add(TEST_DATE_DUPLICATE);
+
+    // DRAFT 用・SUBMIT 用それぞれの空き日付を割り当て（互いにも重複しないよう順番に確保）
+    testDateDraft = findAvailableDate(takenDates, "2025-06-01");
+    takenDates.add(testDateDraft);
+    testDateSubmit = findAvailableDate(takenDates, "2025-06-02");
 
     // TEST_DATE_DUPLICATE 用の日報を事前作成
     const custRes = await request.get("/api/v1/customers", {
@@ -71,16 +96,16 @@ test.describe("ET-002: 日報作成〜提出フロー（SALES）", () => {
   });
 
   test.afterAll(async ({ request }) => {
-    // テストで作成した日報を削除
-    const res = await request.get("/api/v1/reports", {
+    // テストで作成した DRAFT 日報を削除
+    const res = await request.get("/api/v1/reports?per_page=1000", {
       headers: { Authorization: `Bearer ${salesToken}` },
     });
     const json = (await res.json()) as {
       data: { reports: { report_id: number; report_date: string; status: string }[] };
     };
-    const testDates = [TEST_DATE_DRAFT, TEST_DATE_SUBMIT, TEST_DATE_DUPLICATE];
+    const cleanupDates = new Set([testDateDraft, testDateSubmit, TEST_DATE_DUPLICATE]);
     for (const r of json.data.reports) {
-      if (testDates.includes(r.report_date) && r.status === "DRAFT") {
+      if (cleanupDates.has(r.report_date) && r.status === "DRAFT") {
         await request.delete(`/api/v1/reports/${r.report_id}`, {
           headers: { Authorization: `Bearer ${salesToken}` },
         });
@@ -99,7 +124,7 @@ test.describe("ET-002: 日報作成〜提出フロー（SALES）", () => {
     await page.goto("/reports/new");
 
     // 日付入力
-    await page.fill("#report-date", TEST_DATE_DRAFT);
+    await page.fill("#report-date", testDateDraft);
 
     // 顧客選択（最初の行）
     await page.locator("tbody tr").first().getByRole("combobox").click();
@@ -155,7 +180,7 @@ test.describe("ET-002: 日報作成〜提出フロー（SALES）", () => {
 
     await page.goto("/reports/new");
 
-    await page.fill("#report-date", TEST_DATE_SUBMIT);
+    await page.fill("#report-date", testDateSubmit);
 
     await page.locator("tbody tr").first().getByRole("combobox").click();
     await page.getByRole("option", { name: firstCustomerName }).first().click();

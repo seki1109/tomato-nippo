@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 import { AUTH_STATE } from "./helpers/auth";
 
 const TEST_EMAIL = `e2e_test_${Date.now()}@example.com`;
+const TEST_NAME = `E2Eテストユーザー_${Date.now()}`;
 
 /**
  * ET-005: ユーザーマスター管理（ADMIN）
@@ -30,7 +31,7 @@ test.describe("ET-005: ユーザーマスター管理（ADMIN）", () => {
           "Content-Type": "application/json",
         },
         data: {
-          name: "E2Eテストユーザー",
+          name: TEST_NAME,
           email: TEST_EMAIL,
           role: "SALES",
           is_active: false,
@@ -47,7 +48,7 @@ test.describe("ET-005: ユーザーマスター管理（ADMIN）", () => {
 
     await page.waitForURL("**/master/users/new");
 
-    await page.fill("#name", "E2Eテストユーザー");
+    await page.fill("#name", TEST_NAME);
     await page.fill("#email", TEST_EMAIL);
     await page.fill("#password", "Password123");
     await page.fill("#department", "テスト部署");
@@ -59,7 +60,7 @@ test.describe("ET-005: ユーザーマスター管理（ADMIN）", () => {
     await page.getByRole("button", { name: "保存" }).click();
 
     await page.waitForURL("**/master/users");
-    await expect(page.getByRole("cell", { name: "E2Eテストユーザー" })).toBeVisible();
+    await expect(page.getByRole("cell", { name: TEST_NAME })).toBeVisible();
 
     // 作成したユーザーの ID を保存
     const res = await page.request.get("/api/v1/users", {
@@ -89,7 +90,7 @@ test.describe("ET-005: ユーザーマスター管理（ADMIN）", () => {
 
     await page.waitForURL("**/master/users");
 
-    const row = page.locator("tr").filter({ hasText: "E2Eテストユーザー" });
+    const row = page.locator("tr").filter({ hasText: TEST_NAME });
     await expect(row.getByText("MANAGER")).toBeVisible();
   });
 
@@ -104,16 +105,15 @@ test.describe("ET-005: ユーザーマスター管理（ADMIN）", () => {
 
     // 有効フラグを OFF
     const toggle = page.locator("#is-active");
-    const isChecked = await toggle.isChecked();
-    if (isChecked) {
-      await toggle.click();
-    }
+    await expect(toggle).toBeChecked(); // ユーザーが有効状態であることを確認
+    await toggle.click();
+    await expect(toggle).not.toBeChecked(); // React の状態更新が DOM に反映されるまで待機
 
     await page.getByRole("button", { name: "保存" }).click();
 
     await page.waitForURL("**/master/users");
 
-    const row = page.locator("tr").filter({ hasText: "E2Eテストユーザー" });
+    const row = page.locator("tr").filter({ hasText: TEST_NAME });
     await expect(row.getByText("無効")).toBeVisible();
   });
 
