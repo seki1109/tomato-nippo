@@ -1,0 +1,191 @@
+# 営業日報システム API テスト
+# VS Code REST Client 拡張 (humao.rest-client) で使用
+#
+# 使い方:
+#   1. npm run dev でサーバーを起動
+#   2. "### ログイン" の "Send Request" をクリック
+#   3. レスポンスの token をコピーして @token に貼り付ける
+#   4. 各リクエストの "Send Request" をクリック
+
+@baseUrl = http://localhost:3000/api/v1
+
+# SALES ログイン後にここへ貼り付ける
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjMsInJvbGUiOiJTQUxFUyIsIm5hbWUiOiLnlLDkuK3lpKrpg44iLCJpYXQiOjE3NzUwNTQ4MDQsImV4cCI6MTc3NTE0MTIwNH0.XkrSohbjOi1oJEQXk4qFcM74vg50onIf-A0YrC45tZw
+
+# MANAGER ログイン後にここへ貼り付ける
+@managerToken = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIsInJvbGUiOiJNQU5BR0VSIiwibmFtZSI6IuWxseeUsOmDqOmVtyIsImlhdCI6MTc3NTA1NDgzMywiZXhwIjoxNzc1MTQxMjMzfQ.sDyi7lXgFpPPFk8cZeXtJDH-wpS-Z2dzN7CAHg700J0
+
+
+# ============================================================
+# 認証
+# ============================================================
+
+### ログイン（SALES ユーザー: 田中太郎）
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "tanaka@example.com",
+  "password": "password123"
+}
+
+###  ログイン（MANAGER ユーザー）
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "manager@example.com",
+  "password": "password123"
+}
+
+
+# ============================================================
+# POST /reports — 日報新規作成
+# ============================================================
+
+### [正常] DRAFT で作成 → 201
+POST {{baseUrl}}/reports
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "report_date": "2026-03-30",
+  "status": "DRAFT",
+  "visit_records": [
+    { "customer_id": 1, "visit_content": "新製品の提案を実施。前向きな反応。", "visit_order": 1 },
+    { "customer_id": 2, "visit_content": "契約更新の打ち合わせ。来週返答予定。", "visit_order": 2 }
+  ],
+  "problem": "担当者が変わり、関係構築が必要。",
+  "plan": "提案資料を送付する。"
+}
+
+### [正常] SUBMITTED で作成 → 201
+POST {{baseUrl}}/reports
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "report_date": "2026-03-28",
+  "status": "SUBMITTED",
+  "visit_records": [
+    { "customer_id": 1, "visit_content": "フォローアップ訪問。", "visit_order": 1 }
+  ]
+}
+
+### [409] 同日付の重複 → CONFLICT
+# 上の "DRAFT で作成" を一度実行した後に送る
+POST {{baseUrl}}/reports
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "report_date": "2026-03-31",
+  "status": "DRAFT",
+  "visit_records": [
+    { "customer_id": 1, "visit_content": "重複テスト", "visit_order": 1 }
+  ]
+}
+
+### [400] 存在しない customer_id → VALIDATION_ERROR
+POST {{baseUrl}}/reports
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "report_date": "2026-03-27",
+  "visit_records": [
+    { "customer_id": 99999, "visit_content": "テスト", "visit_order": 1 }
+  ]
+}
+
+### [400] visit_records が空 → VALIDATION_ERROR
+POST {{baseUrl}}/reports
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "report_date": "2026-03-26",
+  "visit_records": []
+}
+
+### [400] visit_content が 1001 文字 → VALIDATION_ERROR
+POST {{baseUrl}}/reports
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "report_date": "2026-03-25",
+  "visit_records": [
+    { "customer_id": 1, "visit_content": "あああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああああ", "visit_order": 1 }
+  ]
+}
+
+### [400] 未来日付 → VALIDATION_ERROR
+POST {{baseUrl}}/reports
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "report_date": "2099-01-01",
+  "visit_records": [
+    { "customer_id": 1, "visit_content": "テスト", "visit_order": 1 }
+  ]
+}
+
+### [403] MANAGER でアクセス → FORBIDDEN
+# MANAGER ユーザーでログインして得たトークンをここだけ直接指定
+POST {{baseUrl}}/reports
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOjIsInJvbGUiOiJNQU5BR0VSIiwibmFtZSI6IuWxseeUsOmDqOmVtyIsImlhdCI6MTc3NDg5NDExNiwiZXhwIjoxNzc0OTgwNTE2fQ.DMzty5UZID9wUGYlbOv7jubsdVyhxH6L0tFv-h2B1AQ
+
+{
+  "report_date": "2026-03-24",
+  "visit_records": [
+    { "customer_id": 1, "visit_content": "テスト", "visit_order": 1 }
+  ]
+}
+
+
+# ============================================================
+# GET /reports/:reportId — 日報詳細取得 (AT-REPORT-003)
+# ============================================================
+
+# 【事前準備】
+# 1. SALES トークンを @token へ、MANAGER トークンを @managerToken へ設定
+# 2. 下の "MANAGER で全日報を確認" を実行し、
+#    - 自分（SALES userId=3）の report_id → @reportId
+#    - 別ユーザーの report_id → @otherReportId  ← ここが重要！
+#      (user.user_id が 3 以外のものを選ぶこと)
+@reportId = 1
+@otherReportId = 7
+
+### [事前確認] MANAGER で全日報一覧を取得して report_id を確認する
+# レスポンスの reports[] から user.user_id が 3 以外の report_id を @otherReportId に設定すること
+GET {{baseUrl}}/reports
+Authorization: Bearer {{managerToken}}
+
+### [AT-REPORT-003 #1] SALES が自分の日報を取得 → 200
+GET {{baseUrl}}/reports/{{reportId}}
+Authorization: Bearer {{token}}
+
+### [AT-REPORT-003 #2] SALES が他者の日報を取得 → 403 FORBIDDEN
+# @otherReportId は user.user_id != 3 の日報 ID であること
+GET {{baseUrl}}/reports/{{otherReportId}}
+Authorization: Bearer {{token}}
+
+### [AT-REPORT-003 #3] MANAGER が任意の日報を取得 → 200
+GET {{baseUrl}}/reports/{{otherReportId}}
+Authorization: Bearer {{managerToken}}
+
+### [AT-REPORT-003 #4] 存在しない ID → 404 NOT_FOUND
+GET {{baseUrl}}/reports/99999
+Authorization: Bearer {{token}}
+
+
+# ============================================================
+# GET /reports — 日報一覧（確認用）
+# ============================================================
+
+### 日報一覧取得
+GET {{baseUrl}}/reports
+Authorization: Bearer {{token}}
