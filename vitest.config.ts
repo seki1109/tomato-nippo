@@ -8,6 +8,8 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
+    // APIテスト（DB接続必要）は vitest.api.config.ts で個別実行
+    exclude: ["**/node_modules/**", "src/__tests__/api/**"],
   },
   resolve: {
     alias: {

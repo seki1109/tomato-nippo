@@ -1,11 +1,11 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { POST } from "@/app/api/v1/reports/[reportId]/comments/route";
 import {
   DELETE,
   PUT,
 } from "@/app/api/v1/reports/[reportId]/comments/[commentId]/route";
+import { POST } from "@/app/api/v1/reports/[reportId]/comments/route";
 import { prisma } from "@/lib/prisma";
 
 vi.mock("@/lib/prisma", () => ({

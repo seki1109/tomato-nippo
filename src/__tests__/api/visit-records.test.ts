@@ -1,8 +1,8 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { POST } from "@/app/api/v1/reports/[reportId]/visit-records/route";
 import { PATCH } from "@/app/api/v1/reports/[reportId]/visit-records/reorder/route";
+import { POST } from "@/app/api/v1/reports/[reportId]/visit-records/route";
 import { prisma } from "@/lib/prisma";
 
 vi.mock("@/lib/prisma", () => ({
