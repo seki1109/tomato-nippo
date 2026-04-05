@@ -37,3 +37,8 @@ coverage/
 
 # claude code (local)
 .claude/
+
+# Playwright
+playwright-report/
+test-results/
+tests/e2e/.auth/
