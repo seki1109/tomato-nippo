@@ -7,8 +7,10 @@ const BASE_URL = "http://localhost:3000";
 const AUTH_DIR = path.join(__dirname, ".auth");
 
 const USERS = {
+  // /reports にアクセスできるロール
   sales: { email: "tanaka@example.com", password: "password123", file: "sales.json" },
   manager: { email: "manager@example.com", password: "password123", file: "manager.json" },
+  // ADMIN は /reports にアクセスできないため /master/customers へ誘導
   admin: { email: "admin@example.com", password: "password123", file: "admin.json" },
 } as const;
 
@@ -19,7 +21,7 @@ async function globalSetup() {
 
   const browser = await chromium.launch();
 
-  for (const [, cred] of Object.entries(USERS)) {
+  for (const [role, cred] of Object.entries(USERS)) {
     const context = await browser.newContext();
     const page = await context.newPage();
 
@@ -27,7 +29,19 @@ async function globalSetup() {
     await page.fill("#email", cred.email);
     await page.fill("#password", cred.password);
     await page.click('button[type="submit"]');
-    await page.waitForURL("**/reports");
+
+    // ログイン後、/login 以外のURLに遷移するまで待機
+    // ADMIN は /reports にアクセスできず /unauthorized にリダイレクトされるため
+    // URL が /login でなくなることだけを確認する
+    await page.waitForURL((url) => !url.pathname.startsWith("/login"), {
+      timeout: 30_000,
+    });
+
+    // ADMIN の場合は /master/customers へ遷移してアクティブなセッションを確認
+    if (role === "admin") {
+      await page.goto(`${BASE_URL}/master/customers`);
+      await page.waitForURL("**/master/customers");
+    }
 
     await context.storageState({ path: path.join(AUTH_DIR, cred.file) });
     await context.close();
