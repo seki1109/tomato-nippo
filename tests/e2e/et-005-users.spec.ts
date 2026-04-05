@@ -22,7 +22,7 @@ test.describe("ET-005: ユーザーマスター管理（ADMIN）", () => {
   });
 
   test.afterAll(async ({ request }) => {
-    // テストで作成したユーザーを無効化（ADMIN 自身は削除できないので is_active=false に）
+    // テストで作成したユーザーを無効化
     if (createdUserId) {
       await request.put(`/api/v1/users/${createdUserId}`, {
         headers: {
@@ -41,7 +41,9 @@ test.describe("ET-005: ユーザーマスター管理（ADMIN）", () => {
 
   test("#1 ユーザーを新規登録する → 一覧に追加される", async ({ page }) => {
     await page.goto("/master/users");
-    await page.getByRole("link", { name: "新規登録" }).click();
+
+    // Button(onClick) なので getByRole("button") で取得する
+    await page.getByRole("button", { name: "+ 新規登録" }).click();
 
     await page.waitForURL("**/master/users/new");
 
@@ -59,7 +61,7 @@ test.describe("ET-005: ユーザーマスター管理（ADMIN）", () => {
     await page.waitForURL("**/master/users");
     await expect(page.getByRole("cell", { name: "E2Eテストユーザー" })).toBeVisible();
 
-    // 作成したユーザーのIDを保存
+    // 作成したユーザーの ID を保存
     const res = await page.request.get("/api/v1/users", {
       headers: { Authorization: `Bearer ${adminToken}` },
     });
@@ -87,7 +89,6 @@ test.describe("ET-005: ユーザーマスター管理（ADMIN）", () => {
 
     await page.waitForURL("**/master/users");
 
-    // ユーザー行でロールが MANAGER になっていることを確認
     const row = page.locator("tr").filter({ hasText: "E2Eテストユーザー" });
     await expect(row.getByText("MANAGER")).toBeVisible();
   });
@@ -112,20 +113,21 @@ test.describe("ET-005: ユーザーマスター管理（ADMIN）", () => {
 
     await page.waitForURL("**/master/users");
 
-    // 一覧でステータスが「無効」になっていることを確認
     const row = page.locator("tr").filter({ hasText: "E2Eテストユーザー" });
     await expect(row.getByText("無効")).toBeVisible();
   });
 
   test("#4 無効化ユーザーがログインできない", async ({ page }) => {
     // テスト#3でユーザーを無効化済み
+    // /login に遷移してから localStorage をクリア（about:blank では SecurityError になる）
+    await page.goto("/login");
     await page.context().clearCookies();
     await page.evaluate(() => {
       localStorage.removeItem("auth_token");
       localStorage.removeItem("auth_user");
     });
+    await page.reload();
 
-    await page.goto("/login");
     await page.fill("#email", TEST_EMAIL);
     await page.fill("#password", "Password123");
     await page.click('button[type="submit"]');

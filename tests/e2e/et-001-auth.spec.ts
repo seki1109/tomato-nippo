@@ -5,17 +5,19 @@ import { expect, test } from "@playwright/test";
  */
 test.describe("ET-001: ログイン・ログアウト", () => {
   test.beforeEach(async ({ page }) => {
-    // 各テスト前にストレージをクリアして未認証状態にする
+    // page.evaluate はページが読み込まれていないと SecurityError になるため
+    // /login へ遷移してから localStorage をクリアする
+    await page.goto("/login");
     await page.context().clearCookies();
     await page.evaluate(() => {
       localStorage.removeItem("auth_token");
       localStorage.removeItem("auth_user");
     });
+    // Cookie を削除後に再読み込みして未認証状態を確実にする
+    await page.reload();
   });
 
   test("#1 正常ログイン → /reports に遷移", async ({ page }) => {
-    await page.goto("/login");
-
     await page.fill("#email", "tanaka@example.com");
     await page.fill("#password", "password123");
     await page.click('button[type="submit"]');
@@ -26,8 +28,6 @@ test.describe("ET-001: ログイン・ログアウト", () => {
   });
 
   test("#2 誤ったパスワード → エラーメッセージが表示される", async ({ page }) => {
-    await page.goto("/login");
-
     await page.fill("#email", "tanaka@example.com");
     await page.fill("#password", "wrongpassword");
     await page.click('button[type="submit"]');
@@ -39,8 +39,6 @@ test.describe("ET-001: ログイン・ログアウト", () => {
   });
 
   test("#3 ログアウト → /login に遷移", async ({ page }) => {
-    // まずログイン
-    await page.goto("/login");
     await page.fill("#email", "tanaka@example.com");
     await page.fill("#password", "password123");
     await page.click('button[type="submit"]');
@@ -55,6 +53,7 @@ test.describe("ET-001: ログイン・ログアウト", () => {
   });
 
   test("#4 未認証で /reports にアクセス → /login にリダイレクト", async ({ page }) => {
+    // beforeEach で未認証状態にしてあるので直接アクセス
     await page.goto("/reports");
 
     await expect(page).toHaveURL(/\/login/);

@@ -2,6 +2,10 @@ import { expect, test } from "@playwright/test";
 
 import { AUTH_STATE } from "./helpers/auth";
 
+import type { Page } from "@playwright/test";
+
+
+
 /**
  * ET-003: コメント投稿フロー（MANAGER）
  */
@@ -35,6 +39,19 @@ test.describe("ET-003: コメント投稿フロー（MANAGER）", () => {
     submittedReportId = submitted.report_id;
   });
 
+  /**
+   * 指定テキストを含むコメントブロックを取得する。
+   * セマンティクスで探すことで CSS クラス変更に強くする。
+   * 条件: コメント本文 <p> に targetText を持ち、かつ 編集 ボタンを持つ最も内側の div
+   */
+  function commentBlockLocator(page: Page, targetText: string) {
+    return page
+      .locator("div")
+      .filter({ has: page.locator("p", { hasText: targetText }) })
+      .filter({ has: page.getByRole("button", { name: "編集" }) })
+      .last();
+  }
+
   test("#1 日報一覧に全員分が表示される", async ({ page }) => {
     await page.goto("/reports");
 
@@ -50,7 +67,7 @@ test.describe("ET-003: コメント投稿フロー（MANAGER）", () => {
     await page.goto(`/reports/${submittedReportId}`);
     await expect(page.getByRole("heading", { name: /日報詳細/ })).toBeVisible();
 
-    const commentText = `E2Eテスト コメント投稿 ${Date.now()}`;
+    const commentText = `E2Eテスト コメント投稿 ${Date.now()}-${Math.random().toString(36).slice(2)}`;
     await page.getByPlaceholder("コメントを入力してください").fill(commentText);
     await page.getByRole("button", { name: "コメントを投稿" }).click();
 
@@ -58,47 +75,46 @@ test.describe("ET-003: コメント投稿フロー（MANAGER）", () => {
   });
 
   test("#3 コメントをインライン編集できる", async ({ page }) => {
-    // まずコメントを投稿
     await page.goto(`/reports/${submittedReportId}`);
-    const originalText = `編集テスト用コメント ${Date.now()}`;
+    await expect(page.getByRole("heading", { name: /日報詳細/ })).toBeVisible();
+
+    // コメントを投稿
+    const originalText = `編集テスト用コメント ${Date.now()}-${Math.random().toString(36).slice(2)}`;
     await page.getByPlaceholder("コメントを入力してください").fill(originalText);
     await page.getByRole("button", { name: "コメントを投稿" }).click();
     await expect(page.getByText(originalText)).toBeVisible();
 
-    // コメント編集
-    const commentBlock = page
-      .locator(".rounded-md.border.p-4")
-      .filter({ hasText: originalText });
-    await commentBlock.getByRole("button", { name: "編集" }).click();
+    // コメントブロックを取得して編集ボタンをクリック
+    const block = commentBlockLocator(page, originalText);
+    await block.getByRole("button", { name: "編集" }).click();
 
-    const updatedText = `編集後コメント ${Date.now()}`;
-    const editTextarea = commentBlock.getByRole("textbox");
-    await editTextarea.clear();
-    await editTextarea.fill(updatedText);
-    await commentBlock.getByRole("button", { name: "保存" }).click();
+    const updatedText = `編集後コメント ${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    await block.getByRole("textbox").clear();
+    await block.getByRole("textbox").fill(updatedText);
+    await block.getByRole("button", { name: "保存" }).click();
 
     await expect(page.getByText(updatedText)).toBeVisible();
-    await expect(page.getByText(originalText)).not.toBeVisible();
+    await expect(page.locator("p", { hasText: originalText })).not.toBeVisible();
   });
 
   test("#4 コメントを削除できる", async ({ page }) => {
-    // まずコメントを投稿
     await page.goto(`/reports/${submittedReportId}`);
-    const commentText = `削除テスト用コメント ${Date.now()}`;
+    await expect(page.getByRole("heading", { name: /日報詳細/ })).toBeVisible();
+
+    // コメントを投稿
+    const commentText = `削除テスト用コメント ${Date.now()}-${Math.random().toString(36).slice(2)}`;
     await page.getByPlaceholder("コメントを入力してください").fill(commentText);
     await page.getByRole("button", { name: "コメントを投稿" }).click();
     await expect(page.getByText(commentText)).toBeVisible();
 
-    // コメント削除
-    const commentBlock = page
-      .locator(".rounded-md.border.p-4")
-      .filter({ hasText: commentText });
-    await commentBlock.getByRole("button", { name: "削除" }).click();
+    // コメントブロックの削除ボタンをクリック
+    const block = commentBlockLocator(page, commentText);
+    await block.getByRole("button", { name: "削除" }).click();
 
     // 確認ダイアログで削除実行
     await page.getByRole("button", { name: "削除する" }).click();
 
-    await expect(page.getByText(commentText)).not.toBeVisible();
+    await expect(page.locator("p", { hasText: commentText })).not.toBeVisible();
   });
 
   test("#5 SALES にコメント投稿フォームが非表示", async ({ browser }) => {
