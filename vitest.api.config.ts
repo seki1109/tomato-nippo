@@ -11,8 +11,8 @@ export default defineConfig({
     globals: true,
     include: ["src/__tests__/api/**/*.test.ts"],
     env,
-    // テストを直列実行してDB競合を防ぐ
-    sequence: { concurrent: false },
+    // テストファイルを直列実行してDB競合を防ぐ
+    fileParallelism: false,
   },
   resolve: {
     alias: {

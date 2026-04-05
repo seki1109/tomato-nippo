@@ -12,7 +12,10 @@ import type { Prisma } from "@/generated/prisma/client";
 import type { NextRequest } from "next/server";
 
 function formatDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 export async function GET(request: NextRequest) {
@@ -48,8 +51,8 @@ export async function GET(request: NextRequest) {
   const yearMonth = searchParams.get("year_month");
   if (yearMonth && /^\d{4}-\d{2}$/.test(yearMonth)) {
     const [year, month] = yearMonth.split("-").map(Number);
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 1);
+    const startDate = new Date(Date.UTC(year, month - 1, 1));
+    const endDate = new Date(Date.UTC(year, month, 1));
     where.reportDate = { gte: startDate, lt: endDate };
   }
 
