@@ -41,7 +41,12 @@ export async function PUT(
   }
 
   // 3. バリデーション
-  const body = (await request.json()) as { comment_text?: unknown };
+  let body: { comment_text?: unknown } = {};
+  try {
+    body = (await request.json()) as { comment_text?: unknown };
+  } catch {
+    // empty body treated as missing comment_text
+  }
 
   if (
     body.comment_text === undefined ||
